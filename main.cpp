@@ -103,7 +103,6 @@ static void renderCallback()
     stepPhysX();
 
     // カメラ位置を近づけて注視点を中央に
-    //startRender(PxVec3(0, 3, 6), PxVec3(0, 1, 0), 0.1f, 50.0f);
     startRender(PxVec3(0, 5, 6), PxVec3(0, 0, 1), 0.1f, 50.0f);
 
     PxU32 nbActors = gScene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC);
