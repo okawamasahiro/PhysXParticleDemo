@@ -3,6 +3,7 @@
 
 class ParticleDemo2D : public BaseParticleDemo {
 public:
+    
     void init() override {
         gFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gAllocator, gErrorCallback);
         gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, PxTolerancesScale(), true, nullptr);
@@ -102,7 +103,10 @@ public:
                 reinterpret_cast<PxActor**>(sActors.data()), staticActors);
         }
         // 描画（PhysX SnippetRender）
+
+        // パーティクル描画
         renderActors(actors.data(), dynamicActors, true, PxVec3(0.8f, 0.7f, 0.6f), nullptr);
+
         renderActors(sActors.data(), staticActors, true, PxVec3(0.2f, 0.2f, 0.2f), nullptr);
 
         finishRender();
