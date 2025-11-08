@@ -1,4 +1,5 @@
 #include "ParticleDemo3D.h"
+#include "ParticleDemo2d.h"
 #include <glut.h>
 
 static BaseParticleDemo* gDemo = nullptr;
@@ -12,9 +13,9 @@ static void renderCallback()
 int main(int argc, char** argv)
 {
     // ここで2D / 3Dを切り替える！
-    bool use2D = false;
+    bool use2D = true;
     if (use2D) {
-        //gDemo = new ParticleDemo2D();
+        gDemo = new ParticleDemo2D();
     }
     else {
         gDemo = new ParticleDemo3D();
@@ -24,6 +25,8 @@ int main(int argc, char** argv)
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
     glutInitWindowSize(1280, 720);
     glutCreateWindow(use2D ? "PhysX 2D Demo" : "PhysX 3D Demo");
 
