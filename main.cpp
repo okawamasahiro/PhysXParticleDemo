@@ -48,7 +48,7 @@ static void spawnParticle()
 {
     float x = (rand() % 100 / 50.0f - 1.0f) * 1.0f;
     float y = 3.0f + (rand() % 100) / 150.0f;
-    float z = (rand() % 100 / 50.0f - 1.0f) * 1.0f;
+    float z = (rand() % 100 / 50.0f) * 1.0f;
 
     PxRigidDynamic* sphere = PxCreateDynamic(
         *gPhysics,
@@ -70,7 +70,7 @@ static void spawnParticle()
     gScene->addActor(*sphere);
     gParticles.push_back(sphere);
 
-    printf("Actor count = %u\n", gScene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC));
+    //printf("Actor count = %u\n", gScene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC));
 
     // 古いパーティクルを削除
     if (gParticles.size() > MAX_PARTICLES)
@@ -103,8 +103,27 @@ static void renderCallback()
     stepPhysX();
 
     // カメラ位置を近づけて注視点を中央に
-    startRender(PxVec3(0, 5, 6), PxVec3(0, 0, 1), 0.1f, 50.0f);
+    startRender(PxVec3(0, 2, 10), PxVec3(0, 0, 1), 0.1f, 50.0f);
 
+
+    // === 床の可視化 ===
+    glPushMatrix();
+    glColor3f(0.4f, 0.4f, 0.45f); // 少し明るいグレー
+
+    glBegin(GL_QUADS);
+    glNormal3f(0, 1, 0);          // 上向き法線（PhysXの床と同じ）
+
+    const float size = 100.0f;     // 床の広さ（10m四方）
+    const float y = 0.0f;         // PhysXの床と同じ高さ
+    glVertex3f(-size, y, -size);
+    glVertex3f(-size, y, size);
+    glVertex3f(size, y, size);
+    glVertex3f(size, y, -size);
+    glEnd();
+
+    glPopMatrix();
+
+    // === 物理オブジェクト描画 ===
     PxU32 nbActors = gScene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC);
     std::vector<PxRigidActor*> actors(nbActors);
     if (nbActors)
@@ -126,7 +145,6 @@ int main(int argc, char** argv)
 
     setupDefaultWindow("PhysX Particle Visible Demo");
     setupDefaultRenderState();
-
     glutDisplayFunc(renderCallback);
     glutIdleFunc(renderCallback);
     glutMainLoop();
