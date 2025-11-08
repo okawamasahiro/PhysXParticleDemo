@@ -16,6 +16,7 @@ protected:
     PxScene* gScene = nullptr;
     PxMaterial* gMaterial = nullptr;
     std::vector<PxRigidDynamic*> gParticles;
+    GLuint gFloorShader = 0;
 
     static constexpr int MAX_PARTICLES = 200;
 

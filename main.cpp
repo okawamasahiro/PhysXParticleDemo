@@ -7,46 +7,6 @@
 
 static BaseParticleDemo* gDemo = nullptr;
 
-GLuint compileShader(GLenum type, const char* source)
-{
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, nullptr);
-    glCompileShader(shader);
-
-    GLint success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        char log[512];
-        glGetShaderInfoLog(shader, 512, nullptr, log);
-        printf("Shader compile error: %s\n", log);
-    }
-    return shader;
-}
-
-GLuint createShaderProgram(const char* vsSource, const char* fsSource)
-{
-    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vsSource);
-    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fsSource);
-
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vertexShader);
-    glAttachShader(program, fragmentShader);
-    glLinkProgram(program);
-
-    GLint success;
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success)
-    {
-        char log[512];
-        glGetProgramInfoLog(program, 512, nullptr, log);
-        printf("Program link error: %s\n", log);
-    }
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    return program;
-}
 static void renderCallback()
 {
     gDemo->step();
@@ -64,7 +24,6 @@ int main(int argc, char** argv)
         gDemo = new ParticleDemo3D();
     }
 
-    gDemo->init();
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
@@ -72,6 +31,16 @@ int main(int argc, char** argv)
     glDisable(GL_CULL_FACE);
     glutInitWindowSize(1280, 720);
     glutCreateWindow(use2D ? "PhysX 2D Demo" : "PhysX 3D Demo");
+
+    // --- GLEW 初期化（これをやらないと glCreateShader が nullptr） ---
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK)
+    {
+        fprintf(stderr, "GLEW init failed\n");
+        return -1;
+    }
+
+    gDemo->init();
 
     setupDefaultRenderState();
     glutDisplayFunc(renderCallback);

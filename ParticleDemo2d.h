@@ -1,9 +1,50 @@
 #pragma once
+#define GLEW_STATIC        // (静的リンクの場合のみ必要)
+#include <GL/glew.h>       // ★ 必ず最初に！
 #include "ParticleDemo.h"
 
 class ParticleDemo2D : public BaseParticleDemo {
 public:
-    
+    GLuint compileShader(GLenum type, const char* source)
+    {
+        GLuint shader = glCreateShader(type);
+        glShaderSource(shader, 1, &source, nullptr);
+        glCompileShader(shader);
+
+        GLint success;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+        if (!success)
+        {
+            char log[512];
+            glGetShaderInfoLog(shader, 512, nullptr, log);
+            printf("Shader compile error: %s\n", log);
+        }
+        return shader;
+    }
+
+    GLuint createShaderProgram(const char* vsSource, const char* fsSource)
+    {
+        GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vsSource);
+        GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fsSource);
+
+        GLuint program = glCreateProgram();
+        glAttachShader(program, vertexShader);
+        glAttachShader(program, fragmentShader);
+        glLinkProgram(program);
+
+        GLint success;
+        glGetProgramiv(program, GL_LINK_STATUS, &success);
+        if (!success)
+        {
+            char log[512];
+            glGetProgramInfoLog(program, 512, nullptr, log);
+            printf("Program link error: %s\n", log);
+        }
+
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+        return program;
+    }
     void init() override {
         gFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gAllocator, gErrorCallback);
         gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, PxTolerancesScale(), true, nullptr);
@@ -25,6 +66,23 @@ public:
             *gMaterial
         );
         gScene->addActor(*floorBox);
+
+        // === ★ 固定パイプライン互換 GLSL シェーダ ===
+        const char* floorVertexShader = R"(
+        #version 120
+        void main() {
+            gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+            gl_FrontColor = gl_Color; // カラーもそのまま渡す
+        }
+        )";
+
+        const char* floorFragmentShader = R"(
+        #version 120
+        void main() {
+            gl_FragColor = vec4(0.6, 0.6, 0.55, 1.0);
+        }
+        )";
+        gFloorShader = createShaderProgram(floorVertexShader, floorFragmentShader);
     }
 
     void spawnParticle() {
@@ -105,9 +163,21 @@ public:
         // 描画（PhysX SnippetRender）
 
         // パーティクル描画
-        renderActors(actors.data(), dynamicActors, true, PxVec3(0.8f, 0.7f, 0.6f), nullptr);
 
-        renderActors(sActors.data(), staticActors, true, PxVec3(0.2f, 0.2f, 0.2f), nullptr);
+        glUseProgram(gFloorShader); // ★ シェーダ有効
+        glBegin(GL_QUADS);
+        glNormal3f(0, 1, 0);          // 上向き法線（PhysXの床と同じ）
+
+        const float size = 2.5f;  // 床の広さ（10m四方）
+        const float y = 0.0f;         // PhysXの床と同じ高さ
+        glVertex3f(-size, y, -size);
+        glVertex3f(-size, y, size);
+        glVertex3f(size, y, size);
+        glVertex3f(size, y, -size);
+        glEnd();        // ★ 固定パイプラインに戻す
+        
+        glUseProgram(0);
+        renderActors(actors.data(), dynamicActors, true, PxVec3(0.8f, 0.7f, 0.6f), nullptr);
 
         finishRender();
     }
