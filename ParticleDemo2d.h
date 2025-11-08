@@ -16,11 +16,11 @@ public:
 
         gMaterial = gPhysics->createMaterial(0.4f, 0.4f, 0.6f);
 
-        // 例：サイズ20x1x20の床を作る
+        // 床を作る
         PxRigidStatic* floorBox = PxCreateStatic(
             *gPhysics,
-            PxTransform(PxVec3(0, 0.0f, 0)),                // 床の位置（Yを-0.5にして厚み分下げる）
-            PxBoxGeometry(2.5f, 0.001f, 2.5f),              // 幅X=20, 高さY=1, 奥行Z=20 の半分サイズ
+            PxTransform(PxVec3(0, 0.0f, 0)),                // 床の位置
+            PxBoxGeometry(2.5f, 0.2f, 2.5f),              // 幅X=5, 高さY=1, 奥行Z=5
             *gMaterial
         );
         gScene->addActor(*floorBox);
@@ -87,14 +87,23 @@ public:
         //glPopMatrix();
 
         // === 物理オブジェクト描画 ===
-        PxU32 nbActors = gScene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC);
-        std::vector<PxRigidActor*> actors(nbActors);
-        if (nbActors)
-            gScene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC,
-                reinterpret_cast<PxActor**>(actors.data()), nbActors);
-
+        PxU32 dynamicActors = gScene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC);
+        std::vector<PxRigidActor*> actors(dynamicActors);
+        if (dynamicActors)
+        {
+            gScene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC,
+                reinterpret_cast<PxActor**>(actors.data()), dynamicActors);
+        }
+        PxU32 staticActors = gScene->getNbActors(PxActorTypeFlag::eRIGID_STATIC);
+        std::vector<PxRigidActor*> sActors(staticActors);
+        if (staticActors)
+        {
+            gScene->getActors(PxActorTypeFlag::eRIGID_STATIC,
+                reinterpret_cast<PxActor**>(sActors.data()), staticActors);
+        }
         // 描画（PhysX SnippetRender）
-        renderActors(actors.data(), nbActors, true, PxVec3(0.8f, 0.7f, 0.6f), nullptr);
+        renderActors(actors.data(), dynamicActors, true, PxVec3(0.8f, 0.7f, 0.6f), nullptr);
+        renderActors(sActors.data(), staticActors, true, PxVec3(0.2f, 0.2f, 0.2f), nullptr);
 
         finishRender();
     }
