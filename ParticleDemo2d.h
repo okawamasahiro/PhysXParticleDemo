@@ -2,69 +2,10 @@
 #define GLEW_STATIC        // (静的リンクの場合のみ必要)
 #include <GL/glew.h>       // ★ 必ず最初に！
 #include "ParticleDemo.h"
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include <filesystem>
+#include "Shader.h"
 
 class ParticleDemo2D : public BaseParticleDemo {
 public:
-    // ファイルを文字列として読み込む
-    std::string LoadShaderSource(const char* filePath)
-    {
-        std::ifstream file(filePath);
-        if (!file.is_open())
-        {
-            std::cout << "Current path: " << std::filesystem::current_path() << std::endl;
-            std::cerr << "Failed to open shader file: " << filePath << std::endl;
-            return "";
-        }
-
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        return buffer.str();
-    }
-    GLuint compileShader(GLenum type, const char* source)
-    {
-        GLuint shader = glCreateShader(type);
-        glShaderSource(shader, 1, &source, nullptr);
-        glCompileShader(shader);
-
-        GLint success;
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-        if (!success)
-        {
-            char log[512];
-            glGetShaderInfoLog(shader, 512, nullptr, log);
-            printf("Shader compile error: %s\n", log);
-        }
-        return shader;
-    }
-
-    GLuint createShaderProgram(const char* vsSource, const char* fsSource)
-    {
-        GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vsSource);
-        GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fsSource);
-
-        GLuint program = glCreateProgram();
-        glAttachShader(program, vertexShader);
-        glAttachShader(program, fragmentShader);
-        glLinkProgram(program);
-
-        GLint success;
-        glGetProgramiv(program, GL_LINK_STATUS, &success);
-        if (!success)
-        {
-            char log[512];
-            glGetProgramInfoLog(program, 512, nullptr, log);
-            printf("Program link error: %s\n", log);
-        }
-
-        glDeleteShader(vertexShader);
-        glDeleteShader(fragmentShader);
-        return program;
-    }
     void init() override {
         gFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gAllocator, gErrorCallback);
         gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, PxTolerancesScale(), true, nullptr);
@@ -88,9 +29,9 @@ public:
         gScene->addActor(*floorBox);
 
         // === ★ 固定パイプライン互換 GLSL シェーダ ===
-        std::string vsrc = LoadShaderSource("./shader/vertex.glsl");
-        std::string fsrc = LoadShaderSource("./shader/fragment.glsl");
-        gFloorShader = createShaderProgram(vsrc.data(), fsrc.data());
+        std::string vsrc = Shader::LoadShaderSource("./shader/vertex.glsl");
+        std::string fsrc = Shader::LoadShaderSource("./shader/fragment.glsl");
+        gFloorShader = Shader::createShaderProgram(vsrc.data(), fsrc.data());
     }
 
     void spawnParticle() {
