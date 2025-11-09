@@ -34,18 +34,44 @@ public:
 
         const char* vertexSrc = R"(
 #version 120
-void main() {
+void main()
+{
     gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-    gl_FrontColor = gl_Color; // カラーもそのまま渡す
+    gl_PointSize = 40.0;  // スプライトサイズ（固定値でもOK）
+    gl_FrontColor = gl_Color;
 }
         )";
         const char* fragmentSrc = R"(
 #version 120
+
 void main() {
-    gl_FragColor = vec4(0.0, 0.4, 1.0f, 1.0);
+    // 点スプライト内のUV (0~1)
+    vec2 uv = gl_PointCoord * 2.0 - 1.0;
+    float r2 = dot(uv, uv);
+    if (r2 > 1.0) discard; // 丸い粒だけ残す
+
+    // 擬似的な球面法線
+    vec3 N = normalize(vec3(uv, sqrt(1.0 - r2)));
+
+    // 固定ライト方向
+    vec3 L = normalize(vec3(-0.3, 0.7, 0.6));
+    vec3 V = vec3(0.0, 0.0, 1.0);
+
+    // ディフューズ・スペキュラー
+    float diff = max(dot(N, L), 0.0);
+    float spec = pow(max(dot(reflect(-L, N), V), 0.0), 30.0);
+
+    // ベースカラー（水色）
+    vec3 base = mix(vec3(0.1, 0.4, 0.8), vec3(0.3, 0.8, 1.0), diff);
+    vec3 color = base + vec3(spec * 0.5);
+
+    // 外縁をぼかす（透明に）
+    float alpha = smoothstep(1.0, 0.0, r2) * 0.8;
+
+    gl_FragColor = vec4(color, alpha);
 }
         )";
-        gFloorShader = Shader::createShaderProgram(vertexSrc, fragmentSrc);
+        gShader = Shader::createShaderProgram(vertexSrc, fragmentSrc);
     }
 
     void spawnParticle() {
@@ -123,11 +149,17 @@ void main() {
             gScene->getActors(PxActorTypeFlag::eRIGID_STATIC,
                 reinterpret_cast<PxActor**>(sActors.data()), staticActors);
         }
+
+        std::vector<PxVec3> ptPos;
+        ptPos.reserve(dynamicActors);
+        for (PxU32 i = 0; i < dynamicActors; ++i) {
+            ptPos.push_back(actors[i]->getGlobalPose().p);
+        }
         // 描画（PhysX SnippetRender）
 
         // パーティクル描画
 
-        glUseProgram(gFloorShader); // ★ シェーダ有効
+        glUseProgram(0); // ★ シェーダ有効
         glBegin(GL_QUADS);
         glNormal3f(0, 1, 0);          // 上向き法線（PhysXの床と同じ）
 
@@ -139,9 +171,30 @@ void main() {
         glVertex3f(size, y, -size);
         glEnd();        // ★ 固定パイプラインに戻す
         
-        glUseProgram(0);
-        renderActors(actors.data(), dynamicActors, true, PxVec3(0.8f, 0.7f, 0.6f), nullptr);
+        // ②パーティクル（あなたの“流体っぽい”シェーダ）
+        glDisable(GL_LIGHTING);                  // SnippetRenderの影響を避ける
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_POINT_SPRITE);              // GLSL 1.20でgl_PointCoordを使うなら有効化
+        glEnable(GL_PROGRAM_POINT_SIZE_ARB);        // ARBじゃなくてこっちでOK
 
+        glUseProgram(gShader);
+
+        // 頂点配列：位置だけでOK（カラーを使うなら glColorPointer を有効化）
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glVertexPointer(3, GL_FLOAT, sizeof(PxVec3), ptPos.data());
+
+        // 実際に点群を描く！
+        glDrawArrays(GL_POINTS, 0, (GLsizei)ptPos.size());
+
+        // 後片付け
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glUseProgram(0);
+        glDisable(GL_POINT_SPRITE);
+
+        //glUseProgram(gShader);
+        //renderActors(actors.data(), dynamicActors, true, PxVec3(0.8f, 0.7f, 0.6f), nullptr);
         finishRender();
     }
+
 };
