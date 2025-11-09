@@ -29,9 +29,23 @@ public:
         gScene->addActor(*floorBox);
 
         // === ★ 固定パイプライン互換 GLSL シェーダ ===
-        std::string vsrc = Shader::LoadShaderSource("./shader/vertex.glsl");
-        std::string fsrc = Shader::LoadShaderSource("./shader/fragment.glsl");
-        gFloorShader = Shader::createShaderProgram(vsrc.data(), fsrc.data());
+        //std::string vsrc = Shader::LoadShaderSource("./shader/vertex.glsl");
+        //std::string fsrc = Shader::LoadShaderSource("./shader/fragment.glsl");
+
+        const char* vertexSrc = R"(
+#version 120
+void main() {
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    gl_FrontColor = gl_Color; // カラーもそのまま渡す
+}
+        )";
+        const char* fragmentSrc = R"(
+#version 120
+void main() {
+    gl_FragColor = vec4(0.0, 0.4, 1.0f, 1.0);
+}
+        )";
+        gFloorShader = Shader::createShaderProgram(vertexSrc, fragmentSrc);
     }
 
     void spawnParticle() {
