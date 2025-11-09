@@ -18,7 +18,7 @@ protected:
     std::vector<PxRigidDynamic*> gParticles;
     GLuint gShader = 0;
 
-    static constexpr int MAX_PARTICLES = 200;
+    static constexpr int MAX_PARTICLES = 1000;
 
 public:
     virtual ~BaseParticleDemo() {}
