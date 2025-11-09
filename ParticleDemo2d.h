@@ -2,9 +2,29 @@
 #define GLEW_STATIC        // (静的リンクの場合のみ必要)
 #include <GL/glew.h>       // ★ 必ず最初に！
 #include "ParticleDemo.h"
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <filesystem>
 
 class ParticleDemo2D : public BaseParticleDemo {
 public:
+    // ファイルを文字列として読み込む
+    std::string LoadShaderSource(const char* filePath)
+    {
+        std::ifstream file(filePath);
+        if (!file.is_open())
+        {
+            std::cout << "Current path: " << std::filesystem::current_path() << std::endl;
+            std::cerr << "Failed to open shader file: " << filePath << std::endl;
+            return "";
+        }
+
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        return buffer.str();
+    }
     GLuint compileShader(GLenum type, const char* source)
     {
         GLuint shader = glCreateShader(type);
@@ -68,21 +88,9 @@ public:
         gScene->addActor(*floorBox);
 
         // === ★ 固定パイプライン互換 GLSL シェーダ ===
-        const char* floorVertexShader = R"(
-        #version 120
-        void main() {
-            gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-            gl_FrontColor = gl_Color; // カラーもそのまま渡す
-        }
-        )";
-
-        const char* floorFragmentShader = R"(
-        #version 120
-        void main() {
-            gl_FragColor = vec4(0.6, 0.6, 0.55, 1.0);
-        }
-        )";
-        gFloorShader = createShaderProgram(floorVertexShader, floorFragmentShader);
+        std::string vsrc = LoadShaderSource("./shader/vertex.glsl");
+        std::string fsrc = LoadShaderSource("./shader/fragment.glsl");
+        gFloorShader = createShaderProgram(vsrc.data(), fsrc.data());
     }
 
     void spawnParticle() {
